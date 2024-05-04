@@ -116,5 +116,6 @@ for arch in $ARCHS; do
 
     cmake --build . ${CORES:+-j${CORES}}
     cmake --install .
+    install -m644 ../libcxx/modules/std.cppm "$PREFIX/share/libc++/v1/std.cppm"
     cd ..
 done
