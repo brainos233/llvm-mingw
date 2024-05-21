@@ -218,7 +218,7 @@ jobs:
             llvm-mingw-*.tar.xz
           retention-days: 7
 
-  # Test building the toolchain on msys2 (in the mingw64 and clang64
+  # Test building the toolchain on msys2 (in the ucrt64 and clang64
   # environments). The binaries built here rely on the runtime libraries from
   # the host environment (libstdc++ or libc++). No artifacts are stored from
   # these builds, but llvm-mingw's tests are run.
@@ -233,7 +233,7 @@ jobs:
       fail-fast: false
       matrix:
         sys:
-          - mingw64
+          - ucrt64
           - clang64
     steps:
       - uses: msys2/setup-msys2@v2
@@ -257,9 +257,6 @@ jobs:
           SOURCE_DATE_EPOCH: ${{needs.prepare.outputs.COMMIT_DATE_UNIX}}
           BUILD_DATE: ${{needs.prepare.outputs.BUILD_DATE}}
         run: |
-          if [ "${{matrix.sys}}" = "mingw64" ]; then
-              ARGS="--disable-dylib"
-          fi
           ./build-all.sh $(pwd)/install/llvm-mingw --disable-clang-tools-extra --disable-lldb $ARGS
           .github/workflows/store-version.sh install/llvm-mingw/versions.txt
           ./copy-msys-dependencies.sh $(pwd)/install/llvm-mingw ${{matrix.sys}}
@@ -342,7 +339,7 @@ jobs:
     steps:
       - uses: msys2/setup-msys2@v2
         with:
-          msystem: mingw64
+          msystem: ucrt64
           install: >-
             unzip
             make
@@ -632,7 +629,7 @@ jobs:
           git config --global core.autocrlf false
       - uses: msys2/setup-msys2@v2
         with:
-          msystem: mingw64
+          msystem: ucrt64
           install: >-
             unzip
             make
