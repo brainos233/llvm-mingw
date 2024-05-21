@@ -112,7 +112,7 @@ jobs:
           MINGW_W64_VERSION: ${{needs.prepare.outputs.MINGW_W64_VERSION}}
           SOURCE_DATE_EPOCH: ${{needs.prepare.outputs.COMMIT_DATE_UNIX}}
         run: |
-          sudo apt-get update && sudo apt-get install ninja-build g++-aarch64-linux-gnu
+          sudo apt-get update && sudo apt-get install ninja-build g++-aarch64-linux-gnu libltdl-dev
           ./build-all.sh $(pwd)/install/llvm-mingw --disable-clang-tools-extra --no-runtimes --host=aarch64-linux-gnu
           .github/workflows/store-version.sh install/llvm-mingw/versions.txt
       - uses: actions/download-artifact@v4
@@ -307,7 +307,7 @@ jobs:
           SOURCE_DATE_EPOCH: ${{needs.prepare.outputs.COMMIT_DATE_UNIX}}
           BUILD_DATE: ${{needs.prepare.outputs.BUILD_DATE}}
         run: |
-          sudo apt-get update && sudo apt-get install autoconf-archive ninja-build
+          sudo apt-get update && sudo apt-get install autoconf-archive ninja-build libltdl-dev
           ./build-cross-tools.sh /opt/llvm-mingw $(pwd)/install/llvm-mingw ${{matrix.arch}} --with-python
           .github/workflows/store-version.sh install/llvm-mingw/versions.txt
           cd install
