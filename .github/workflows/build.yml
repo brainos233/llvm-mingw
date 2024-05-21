@@ -112,7 +112,7 @@ jobs:
           MINGW_W64_VERSION: ${{needs.prepare.outputs.MINGW_W64_VERSION}}
           SOURCE_DATE_EPOCH: ${{needs.prepare.outputs.COMMIT_DATE_UNIX}}
         run: |
-          sudo apt-get update && sudo apt-get install ninja-build g++-aarch64-linux-gnu libltdl-dev
+          sudo apt-get update && sudo apt-get install ninja-build g++-aarch64-linux-gnu
           ./build-all.sh $(pwd)/install/llvm-mingw --disable-clang-tools-extra --no-runtimes --host=aarch64-linux-gnu
           .github/workflows/store-version.sh install/llvm-mingw/versions.txt
       - uses: actions/download-artifact@v4
