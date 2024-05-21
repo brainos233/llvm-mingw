@@ -19,7 +19,7 @@ on:
 
 jobs:
   prepare:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       TAG: ${{steps.get-parameters.outputs.TAG}}
     steps:
@@ -40,7 +40,7 @@ jobs:
 
   docker-build-dev:
     needs: [prepare]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
         with:
@@ -66,7 +66,7 @@ jobs:
 
   docker-build:
     needs: [prepare]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
@@ -121,7 +121,7 @@ jobs:
 
   docker-create:
     needs: [docker-build, prepare]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     if: ${{inputs.push}}
     steps:
       - uses: cloudposse/github-action-matrix-outputs-read@main

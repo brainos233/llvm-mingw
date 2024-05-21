@@ -19,7 +19,7 @@ on:
 
 jobs:
   prepare:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       LLVM_VERSION: ${{steps.get-parameters.outputs.LLVM_VERSION}}
     steps:
