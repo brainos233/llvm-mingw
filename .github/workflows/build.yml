@@ -54,7 +54,7 @@ jobs:
         run: |
           echo LLVM_VERSION=$(git ls-remote https://github.com/llvm/llvm-project.git | grep 'refs/heads/main$' | awk '{print $1}') >> $GITHUB_OUTPUT
           echo MINGW_W64_VERSION=$(git ls-remote https://github.com/mingw-w64/mingw-w64.git | grep 'refs/heads/master$' | awk '{print $1}') >> $GITHUB_OUTPUT
-          echo PYTHON_VERSION_MINGW=$(git ls-remote https://github.com/msys2-contrib/cpython-mingw.git | grep 'refs/heads/mingw-v3.11.6$' | awk '{print $1}') >> $GITHUB_OUTPUT
+          echo PYTHON_VERSION_MINGW=$(git ls-remote https://github.com/msys2-contrib/cpython-mingw.git | grep 'refs/heads/mingw-v3.12.7$' | awk '{print $1}') >> $GITHUB_OUTPUT
           cat $GITHUB_OUTPUT
           cat $GITHUB_OUTPUT >> parameters.txt
       - uses: actions/upload-artifact@v4
@@ -489,7 +489,8 @@ jobs:
             -DCMAKE_C_COMPILER=clang `
             -DCMAKE_CXX_COMPILER=clang++ `
             -DCMAKE_ASM_MASM_COMPILER=llvm-ml `
-            -DLIBOMP_ASMFLAGS=${{matrix.asmflag}}
+            -DLIBOMP_ASMFLAGS=${{matrix.asmflag}} `
+            -DLLVM_LIT_ARGS="-v --time-tests"
           ninja
           ninja check-openmp
 
@@ -566,7 +567,8 @@ jobs:
             -DSANITIZER_CXX_ABI=libc++ `
             -DCOMPILER_RT_INCLUDE_TESTS=ON `
             -DCOMPILER_RT_BUILD_LIBFUZZER=OFF `
-            -DCOMPILER_RT_BUILD_ORC=OFF
+            -DCOMPILER_RT_BUILD_ORC=OFF `
+            -DLLVM_LIT_ARGS="-v --time-tests"
           ninja
           ninja check-compiler-rt
 
