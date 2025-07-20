@@ -18,7 +18,7 @@ set -e
 
 : ${DEFAULT_WIN32_WINNT:=0x601}
 : ${DEFAULT_MSVCRT:=ucrt}
-: ${MINGW_W64_VERSION:=dcbe86832f5c161ab70098ffb11b1e4955577140}
+: ${MINGW_W64_VERSION:=e6535ce604431e88522e354d69379a1ba82e6710}
 
 CFGUARD_FLAGS="--enable-cfguard"
 
@@ -87,7 +87,7 @@ unset CC
 : ${CORES:=$(nproc 2>/dev/null)}
 : ${CORES:=$(sysctl -n hw.ncpu 2>/dev/null)}
 : ${CORES:=4}
-: ${ARCHS:=${TOOLCHAIN_ARCHS-i686 x86_64 armv7 aarch64}}
+: ${ARCHS:=${TOOLCHAIN_ARCHS-i686 x86_64 armv7 aarch64 arm64ec}}
 
 if [ -z "$SKIP_INCLUDE_TRIPLET_PREFIX" ]; then
     HEADER_ROOT="$PREFIX/generic-w64-mingw32"
@@ -121,7 +121,7 @@ for arch in $ARCHS; do
     armv7)
         FLAGS="--disable-lib32 --disable-lib64 --enable-libarm32"
         ;;
-    aarch64)
+    aarch64|arm64ec)
         FLAGS="--disable-lib32 --disable-lib64 --enable-libarm64"
         ;;
     i686)

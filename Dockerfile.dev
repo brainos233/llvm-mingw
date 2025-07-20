@@ -34,7 +34,7 @@ RUN ./build-lldb-mi.sh $TOOLCHAIN_PREFIX
 COPY strip-llvm.sh ./
 RUN ./strip-llvm.sh $TOOLCHAIN_PREFIX
 
-ARG TOOLCHAIN_ARCHS="i686 x86_64 armv7 aarch64"
+ARG TOOLCHAIN_ARCHS="i686 x86_64 armv7 aarch64 arm64ec"
 
 # Install the usual $TUPLE-clang binaries
 COPY wrappers/*.sh wrappers/*.c wrappers/*.h wrappers/*.cfg ./wrappers/
@@ -141,6 +141,7 @@ RUN ./build-openmp.sh $TOOLCHAIN_PREFIX $CFGUARD_ARGS
 
 RUN cd test && \
     for arch in $TOOLCHAIN_ARCHS; do \
+        if [ "$arch" = "arm64ec" ]; then continue; fi; \
         for test in hello-omp; do \
             $arch-w64-mingw32-clang $test.c -o $arch/$test.exe -fopenmp=libomp || exit 1; \
         done; \

@@ -2,11 +2,8 @@ name: Make a release, upload artifacts
 on:
   workflow_dispatch:
     inputs:
-      commit:
-        description: 'Commit to extract from'
-        type: string
-      branch:
-        description: 'Branch to extract from'
+      ref:
+        description: 'Ref to extract from'
         type: string
         default: 'master'
       tag:
@@ -39,24 +36,25 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Download artifacts
-        uses: dawidd6/action-download-artifact@v6
+        uses: dawidd6/action-download-artifact@v10
         with:
           workflow: build.yml
           workflow_conclusion: success
-          commit: ${{inputs.commit}}
-          branch: ${{inputs.branch}}
+          ref: ${{inputs.ref}}
           event: push
       - name: Rearrange files
         run: |
           rm -rf linux-asserts*
           rm -rf msys2*
+          rm -rf linux-stage1-*
+          rm -rf macos-llvm*
           mv *-toolchain/*.zip *-toolchain/*.tar.xz .
       - name: Set environment
         run: |
           cat parameters/parameters.txt >> $GITHUB_ENV
       - uses: actions/checkout@v4
         with:
-          ref: ${{ (inputs.commit != '' && inputs.commit) || inputs.branch }}
+          ref: ${{inputs.ref}}
           path: repo
       - name: Make a tag
         if: ${{inputs.make_tag}}

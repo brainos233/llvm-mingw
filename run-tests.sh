@@ -27,7 +27,7 @@ export PATH=$PREFIX/bin:$PATH
 : ${CORES:=$(nproc 2>/dev/null)}
 : ${CORES:=$(sysctl -n hw.ncpu 2>/dev/null)}
 : ${CORES:=4}
-: ${ARCHS:=${TOOLCHAIN_ARCHS-i686 x86_64 armv7 aarch64}}
+: ${ARCHS:=${TOOLCHAIN_ARCHS-i686 x86_64 armv7 aarch64 arm64ec}}
 
 MAKE=make
 if command -v gmake >/dev/null; then
@@ -107,6 +107,10 @@ set_native() {
         if [ -n "$winbuild" ] && [ "$winbuild" -ge 22000 ]; then
             # Since Windows 11, x86_64 binaries can also be emulated.
             RUN_X86_64=true
+            # arm64ec can also be executed (as it is part of being able to
+            # execute x86_64).
+            RUN_ARM64EC=true
+            NATIVE_ARM64EC=1
         fi
         if [ -n "$winbuild" ] && [ "$winbuild" -lt 26100 ]; then
             # Since Windows 11 24H2 armv7 binaries can no longer be
@@ -174,6 +178,8 @@ fi
 
 for arch in $ARCHS; do
     unset HAVE_ASAN
+    HAVE_UBSAN=1
+    HAVE_OPENMP=1
     case $arch in
     i686)
         RUN="$RUN_I686"
@@ -201,6 +207,17 @@ for arch in $ARCHS; do
         COPY="$COPY_AARCH64"
         NATIVE="$NATIVE_AARCH64"
         ;;
+    arm64ec)
+        unset HAVE_UBSAN
+        unset HAVE_OPENMP
+        RUN="$RUN_ARM64EC"
+        COPY="$COPY_ARM64EC"
+        NATIVE="$NATIVE_ARM64EC"
+        if [ -z "$IS_UCRT" ]; then
+            # arm64ec msvcrt isn't working properly yet
+            continue
+        fi
+        ;;
     esac
 
     TARGET=all
@@ -219,8 +236,8 @@ for arch in $ARCHS; do
     [ -z "$CLEAN" ] || rm -rf $TEST_DIR
     mkdir -p $TEST_DIR
     cd $TEST_DIR
-    $MAKE -f ../Makefile ARCH=$arch HAVE_UWP=$HAVE_UWP HAVE_CFGUARD=$HAVE_CFGUARD HAVE_ASAN=$HAVE_ASAN NATIVE=$NATIVE RUNTIMES_SRC=$PREFIX/$arch-w64-mingw32/bin clean
-    $MAKE -f ../Makefile ARCH=$arch HAVE_UWP=$HAVE_UWP HAVE_CFGUARD=$HAVE_CFGUARD HAVE_ASAN=$HAVE_ASAN NATIVE=$NATIVE RUNTIMES_SRC=$PREFIX/$arch-w64-mingw32/bin RUN="$RUN" $COPYARG $MAKEOPTS -j$CORES $TARGET
+    $MAKE -f ../Makefile ARCH=$arch HAVE_UWP=$HAVE_UWP HAVE_CFGUARD=$HAVE_CFGUARD HAVE_ASAN=$HAVE_ASAN HAVE_UBSAN=$HAVE_UBSAN HAVE_OPENMP=$HAVE_OPENMP NATIVE=$NATIVE RUNTIMES_SRC=$PREFIX/$arch-w64-mingw32/bin clean
+    $MAKE -f ../Makefile ARCH=$arch HAVE_UWP=$HAVE_UWP HAVE_CFGUARD=$HAVE_CFGUARD HAVE_ASAN=$HAVE_ASAN HAVE_UBSAN=$HAVE_UBSAN HAVE_OPENMP=$HAVE_OPENMP NATIVE=$NATIVE RUNTIMES_SRC=$PREFIX/$arch-w64-mingw32/bin RUN="$RUN" $COPYARG $MAKEOPTS -j$CORES $TARGET
     cd ..
 done
 echo All tests succeeded

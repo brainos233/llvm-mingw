@@ -40,13 +40,16 @@ while [ $# -gt 0 ]; do
     elif [ "$1" = "--disable-cfguard" ]; then
         CFGUARD_CFLAGS=
         ENABLE_CFGUARD=
+    elif [ "$1" = "--native" ]; then
+        NATIVE=1
+        SRC_DIR=..
     else
         PREFIX="$1"
     fi
     shift
 done
 if [ -z "$PREFIX" ]; then
-    echo "$0 [--build-sanitizers] [--enable-cfguard|--disable-cfguard] dest"
+    echo "$0 [--build-sanitizers] [--enable-cfguard|--disable-cfguard] [--native] dest"
     exit 1
 fi
 if [ -n "$SANITIZERS" ] && [ -n "$ENABLE_CFGUARD" ]; then
@@ -57,10 +60,9 @@ mkdir -p "$PREFIX"
 PREFIX="$(cd "$PREFIX" && pwd)"
 export PATH="$PREFIX/bin:$PATH"
 
-: ${ARCHS:=${TOOLCHAIN_ARCHS-i686 x86_64 armv7 aarch64}}
+: ${ARCHS:=${TOOLCHAIN_ARCHS-i686 x86_64 armv7 aarch64 arm64ec}}
 
-ANY_ARCH=$(echo $ARCHS | awk '{print $1}')
-CLANG_RESOURCE_DIR="$("$PREFIX/bin/$ANY_ARCH-w64-mingw32-clang" --print-resource-dir)"
+CLANG_RESOURCE_DIR="$("$PREFIX/bin/clang" --print-resource-dir)"
 
 if [ ! -d llvm-project/compiler-rt ] || [ -n "$SYNC" ]; then
     CHECKOUT_ONLY=1 ./build-llvm.sh
@@ -91,6 +93,34 @@ if [ -h "$CLANG_RESOURCE_DIR/include" ]; then
     INSTALL_PREFIX="$WORKDIR/install"
 fi
 
+if [ -n "$NATIVE" ]; then
+    [ -z "$CLEAN" ] || rm -rf build-native
+    mkdir -p build-native
+    cd build-native
+    [ -n "$NO_RECONF" ] || rm -rf CMake*
+    cmake \
+        ${CMAKE_GENERATOR+-G} "$CMAKE_GENERATOR" \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_INSTALL_PREFIX="$CLANG_RESOURCE_DIR" \
+        -DCMAKE_C_COMPILER=clang \
+        -DCMAKE_CXX_COMPILER=clang++ \
+        -DLLVM_CONFIG_PATH="" \
+        -DCMAKE_FIND_ROOT_PATH=$PREFIX \
+        -DCMAKE_FIND_ROOT_PATH_MODE_INCLUDE=ONLY \
+        -DCMAKE_FIND_ROOT_PATH_MODE_PACKAGE=ONLY \
+        -DCOMPILER_RT_USE_LIBCXX=OFF \
+        $SRC_DIR
+    cmake --build . ${CORES:+-j${CORES}}
+    cmake --install . --prefix "$INSTALL_PREFIX"
+
+    if [ "$INSTALL_PREFIX" != "$CLANG_RESOURCE_DIR" ]; then
+        # symlink to system headers - skip copy
+        rm -rf "$INSTALL_PREFIX/include"
+
+        cp -r "$INSTALL_PREFIX/." $CLANG_RESOURCE_DIR
+    fi
+    exit 0
+fi
 
 for arch in $ARCHS; do
     [ -z "$CLEAN" ] || rm -rf build-$arch$BUILD_SUFFIX
@@ -122,6 +152,13 @@ for arch in $ARCHS; do
         -DCMAKE_CXX_FLAGS_INIT="$CFGUARD_CFLAGS" \
         $SRC_DIR
     cmake --build . ${CORES:+-j${CORES}}
+
+    # Skip install on arm64ec, we merge archives instead.
+    if [ "$arch" = "arm64ec" ]; then
+        cd ..
+        continue
+    fi
+
     cmake --install . --prefix "$INSTALL_PREFIX"
     mkdir -p "$PREFIX/$arch-w64-mingw32/bin"
     if [ -n "$SANITIZERS" ]; then
@@ -140,6 +177,20 @@ for arch in $ARCHS; do
         esac
     fi
     cd ..
+done
+
+# Clang expects the aarch64 compiler-rt name on ARM64EC. While this could be adjusted
+# in Clang, the current approach mirrors MSVC, where the core CRT is provided as
+# archives containing both EC and native support. Ideally, the LLVM build system would
+# handle this automatically, but for now we can merge it here.
+for arch in $ARCHS; do
+    if [ "$arch" = "arm64ec" ]; then
+        rm -f "$INSTALL_PREFIX/lib/windows/libclang_rt.builtins-aarch64.a" \
+              "$INSTALL_PREFIX/lib/windows/libclang_rt.builtins-arm64ec.a"
+        "$PREFIX/bin/llvm-lib" -machine:arm64ec "-out:$INSTALL_PREFIX/lib/windows/libclang_rt.builtins-aarch64.a" \
+                               build-aarch64/lib/windows/libclang_rt.builtins-aarch64.a \
+                               build-arm64ec/lib/windows/libclang_rt.builtins-arm64ec.a
+    fi
 done
 
 if [ "$INSTALL_PREFIX" != "$CLANG_RESOURCE_DIR" ]; then
