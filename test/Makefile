@@ -80,9 +80,7 @@ TESTS_FORTIFY = bufferoverflow crt-test
 ifneq ($(HAVE_ASAN),)
     TESTS_ASAN = stacksmash
 endif
-ifneq ($(HAVE_UBSAN),)
-    TESTS_UBSAN = ubsan
-endif
+TESTS_UBSAN = ubsan
 ifneq ($(HAVE_OPENMP),)
     TESTS_OMP = hello-omp
 endif
