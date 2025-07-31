@@ -29,8 +29,8 @@ jobs:
         with:
           workflow: build.yml
           workflow_conclusion: success
-          ref: ${{github.event_name == 'schedule' && 'master' || inputs.ref}}
-          event: ${{github.event_name == 'schedule' && 'schedule' || inputs.pipeline_type}}
+          ref: ${{github.event_name == 'workflow_dispatch' && inputs.ref || 'master'}}
+          event: ${{github.event_name == 'workflow_dispatch' && inputs.pipeline_type || 'schedule'}}
           name: parameters
       - name: Get build parameters
         id: get-parameters
@@ -56,8 +56,8 @@ jobs:
         with:
           workflow: build.yml
           workflow_conclusion: success
-          ref: ${{github.event_name == 'schedule' && 'master' || inputs.ref}}
-          event: ${{github.event_name == 'schedule' && 'schedule' || inputs.pipeline_type}}
+          ref: ${{github.event_name == 'workflow_dispatch' && inputs.ref || 'master'}}
+          event: ${{github.event_name == 'workflow_dispatch' && inputs.pipeline_type || 'schedule'}}
           name: windows-ucrt-${{matrix.arch}}-toolchain
       - name: Unpack toolchain
         run: |
@@ -92,6 +92,7 @@ jobs:
             -DLLVM_WINDOWS_PREFER_FORWARD_SLASH=OFF `
             -DCMAKE_C_COMPILER=clang `
             -DCMAKE_CXX_COMPILER=clang++ `
+            -DCMAKE_CXX_FLAGS="-D__USE_MINGW_ANSI_STDIO=${{startsWith(matrix.arch, 'a') && '0' || '1'}}" `
             -DLLVM_LIT_ARGS="-v --time-tests"
           ninja test-depends
           cp c:\llvm-mingw\bin\libc++.dll bin

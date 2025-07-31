@@ -16,7 +16,7 @@
 
 set -e
 
-: ${LLVM_VERSION:=llvmorg-21.1.0-rc1}
+: ${LLVM_VERSION:=llvmorg-21.1.0-rc2}
 ASSERTS=OFF
 unset HOST
 BUILDDIR="build"
@@ -108,7 +108,7 @@ if [ -z "$CHECKOUT_ONLY" ]; then
         exit 1
     fi
 
-    if [ -z "$INSTRUMENTED" ]; then
+    if [ "$INSTRUMENTED" = "OFF" ]; then
         mkdir -p "$PREFIX"
         PREFIX="$(cd "$PREFIX" && pwd)"
     fi
