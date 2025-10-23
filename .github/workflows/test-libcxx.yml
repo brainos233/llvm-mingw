@@ -49,9 +49,6 @@ jobs:
           - { arch: aarch64, target_arch: aarch64 }
     runs-on: ${{startsWith(matrix.arch, 'a') && 'windows-11-arm' || 'windows-latest'}}
     steps:
-      - name: Install dependencies
-        run: |
-          choco install ninja
       - name: Download toolchain
         uses: dawidd6/action-download-artifact@v10
         with:
@@ -88,7 +85,6 @@ jobs:
             -DLIBCXX_CXX_ABI=libcxxabi `
             -DCMAKE_C_COMPILER=${{matrix.target_arch}}-w64-mingw32-clang `
             -DCMAKE_CXX_COMPILER=${{matrix.target_arch}}-w64-mingw32-clang++ `
-            -DCMAKE_CXX_COMPILER_TARGET=${{matrix.target_arch}}-w64-windows-gnu `
             -DLIBCXXABI_ENABLE_SHARED=NO `
             -DLIBCXX_ENABLE_STATIC_ABI_LIBRARY=YES `
             -DLIBCXX_USE_COMPILER_RT=YES `

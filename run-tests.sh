@@ -116,6 +116,16 @@ set_native() {
             NATIVE_ARMV7=1
             RUN_ARMV7=true
         fi
+
+        if [ -z "$IS_UCRT" ]; then
+            # If targeting msvcrt.dll, skip executing the x86 binaries
+            # emulated. They do run, but statically linked mingw math
+            # functions fail some tests, when running emulated; those functions
+            # rely on 80 bit long doubles actually having more precision than
+            # 64 bit doubles.
+            unset RUN_I686
+            unset RUN_X86_64
+        fi
         ;;
     esac
 }
@@ -200,6 +210,13 @@ for arch in $ARCHS; do
         RUN="$RUN_AARCH64"
         COPY="$COPY_AARCH64"
         NATIVE="$NATIVE_AARCH64"
+        ;;
+    arm64ec)
+        unset HAVE_UBSAN
+        unset HAVE_OPENMP
+        RUN="$RUN_ARM64EC"
+        COPY="$COPY_ARM64EC"
+        NATIVE="$NATIVE_ARM64EC"
         ;;
     esac
 
