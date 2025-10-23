@@ -258,7 +258,7 @@ jobs:
 
   macos-stage1:
     needs: [prepare]
-    runs-on: macos-latest
+    runs-on: macos-14
     steps:
       - uses: actions/checkout@v4
       - name: Build
@@ -287,7 +287,7 @@ jobs:
   # Build a cross compiler for macOS, targeting Windows.
   macos:
     needs: [prepare, macos-stage1, linux-profile]
-    runs-on: macos-latest
+    runs-on: macos-14
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
@@ -329,9 +329,8 @@ jobs:
             llvm-mingw-*.tar.xz
           retention-days: 7
 
-  # Test building the toolchain on msys2 (in the ucrt64 and clang64
-  # environments). The binaries built here rely on the runtime libraries from
-  # the host environment (libstdc++ or libc++).
+  # Test building the toolchain on msys2. The binaries built here rely on the
+  # runtime libraries from the host environment (libstdc++ or libc++).
   msys2:
     needs: [prepare]
     runs-on: windows-latest
@@ -342,7 +341,6 @@ jobs:
       fail-fast: false
       matrix:
         sys:
-          - ucrt64
           - clang64
     steps:
       - uses: msys2/setup-msys2@v2
@@ -495,9 +493,6 @@ jobs:
           - { arch: aarch64, target_arch: aarch64 }
     runs-on: ${{startsWith(matrix.arch, 'a') && 'windows-11-arm' || 'windows-latest'}}
     steps:
-      - name: Install dependencies
-        run: |
-          choco install ninja
       - uses: actions/download-artifact@v4
         with:
           name: windows-ucrt-${{matrix.arch}}-toolchain
@@ -557,9 +552,6 @@ jobs:
           - { arch: aarch64 }
     runs-on: ${{startsWith(matrix.arch, 'a') && 'windows-11-arm' || 'windows-latest'}}
     steps:
-      - name: Install dependencies
-        run: |
-          choco install ninja
       - uses: actions/download-artifact@v4
         with:
           name: windows-ucrt-${{matrix.arch}}-toolchain
@@ -623,9 +615,6 @@ jobs:
           - aarch64
     runs-on: ${{startsWith(matrix.arch, 'a') && 'windows-11-arm' || 'windows-latest'}}
     steps:
-      - name: Install dependencies
-        run: |
-          choco install ninja
       - uses: actions/download-artifact@v4
         with:
           name: windows-ucrt-${{matrix.arch}}-toolchain

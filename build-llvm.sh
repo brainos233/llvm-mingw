@@ -16,7 +16,7 @@
 
 set -e
 
-: ${LLVM_VERSION:=llvmorg-21.1.0-rc2}
+: ${LLVM_VERSION:=llvmorg-21.1.4}
 ASSERTS=OFF
 unset HOST
 BUILDDIR="build"
@@ -39,6 +39,9 @@ while [ $# -gt 0 ]; do
     --with-clang)
         WITH_CLANG=1
         BUILDDIR="$BUILDDIR-withclang"
+        ;;
+    --use-linker=*)
+        USE_LINKER="${1#*=}"
         ;;
     --thinlto)
         LTO="thin"
@@ -81,12 +84,8 @@ while [ $# -gt 0 ]; do
         # A fixed BUILDDIR is set at the end for this case.
         ;;
     --pgo|--pgo=*)
-        case "$1" in
-        --pgo=*)
-            LLVM_PROFDATA_FILE="${1#--pgo}"
-            LLVM_PROFDATA_FILE="${LLVM_PROFDATA_FILE#=}"
-            ;;
-        esac
+        LLVM_PROFDATA_FILE="${1#--pgo}"
+        LLVM_PROFDATA_FILE="${LLVM_PROFDATA_FILE#=}"
         LLVM_PROFDATA_FILE="${LLVM_PROFDATA_FILE:-profile.profdata}"
         if [ ! -e "$LLVM_PROFDATA_FILE" ]; then
             echo Profile \"$LLVM_PROFDATA_FILE\" not found
@@ -96,6 +95,10 @@ while [ $# -gt 0 ]; do
         BUILDDIR="$BUILDDIR-pgo"
         ;;
     *)
+        if [ -n "$PREFIX" ]; then
+            echo Unrecognized parameter $1
+            exit 1
+        fi
         PREFIX="$1"
         ;;
     esac
@@ -104,7 +107,7 @@ done
 BUILDDIR="$BUILDDIR$ASSERTSSUFFIX"
 if [ -z "$CHECKOUT_ONLY" ]; then
     if [ -z "$PREFIX" ]; then
-        echo $0 [--enable-asserts] [--with-clang] [--thinlto] [--lto] [--instrumented[=type]] [--pgo[=profile]] [--disable-dylib] [--full-llvm] [--with-python] [--disable-lldb] [--disable-clang-tools-extra] [--host=triple] [--macos-native-tools] dest
+        echo $0 [--enable-asserts] [--with-clang] [--use-linker=linker] [--thinlto] [--lto] [--instrumented[=type]] [--pgo[=profile]] [--disable-dylib] [--full-llvm] [--with-python] [--disable-lldb] [--disable-clang-tools-extra] [--host=triple] [--no-llvm-tool-reuse] [--macos-native-tools] dest
         exit 1
     fi
 
@@ -190,7 +193,7 @@ if [ -n "$HOST" ]; then
     if [ -n "$WITH_CLANG" ]; then
         CMAKEFLAGS="$CMAKEFLAGS -DCMAKE_C_COMPILER=clang"
         CMAKEFLAGS="$CMAKEFLAGS -DCMAKE_CXX_COMPILER=clang++"
-        CMAKEFLAGS="$CMAKEFLAGS -DLLVM_USE_LINKER=lld"
+        CMAKEFLAGS="$CMAKEFLAGS -DLLVM_USE_LINKER=${USE_LINKER:-lld}"
         CMAKEFLAGS="$CMAKEFLAGS -DCMAKE_ASM_COMPILER_TARGET=$HOST"
         CMAKEFLAGS="$CMAKEFLAGS -DCMAKE_C_COMPILER_TARGET=$HOST"
         CMAKEFLAGS="$CMAKEFLAGS -DCMAKE_CXX_COMPILER_TARGET=$HOST"
@@ -267,12 +270,14 @@ elif [ -n "$WITH_CLANG" ]; then
     # tools.
     CMAKEFLAGS="$CMAKEFLAGS -DCMAKE_C_COMPILER=clang"
     CMAKEFLAGS="$CMAKEFLAGS -DCMAKE_CXX_COMPILER=clang++"
-    CMAKEFLAGS="$CMAKEFLAGS -DLLVM_USE_LINKER=lld"
+    CMAKEFLAGS="$CMAKEFLAGS -DLLVM_USE_LINKER=${USE_LINKER:-lld}"
 else
     # Native compilation with the system default compiler.
 
     # Use a faster linker, if available.
-    if command -v ld.lld >/dev/null; then
+    if [ -n "$USE_LINKER" ]; then
+        CMAKEFLAGS="$CMAKEFLAGS -DLLVM_USE_LINKER=$USE_LINKER"
+    elif command -v ld.lld >/dev/null; then
         CMAKEFLAGS="$CMAKEFLAGS -DLLVM_USE_LINKER=lld"
     elif command -v ld.gold >/dev/null; then
         CMAKEFLAGS="$CMAKEFLAGS -DLLVM_USE_LINKER=gold"
