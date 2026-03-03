@@ -54,7 +54,7 @@ jobs:
         run: |
           echo LLVM_VERSION=$(git ls-remote https://github.com/llvm/llvm-project.git | grep 'refs/heads/main$' | awk '{print $1}') >> $GITHUB_OUTPUT
           echo MINGW_W64_VERSION=$(git ls-remote https://github.com/mingw-w64/mingw-w64.git | grep 'refs/heads/master$' | awk '{print $1}') >> $GITHUB_OUTPUT
-          echo PYTHON_VERSION_MINGW=$(git ls-remote https://github.com/msys2-contrib/cpython-mingw.git | grep 'refs/heads/mingw-v3.12.9$' | awk '{print $1}') >> $GITHUB_OUTPUT
+          echo PYTHON_VERSION_MINGW=$(git ls-remote https://github.com/msys2-contrib/cpython-mingw.git | grep 'refs/heads/mingw-v3.13.11$' | awk '{print $1}') >> $GITHUB_OUTPUT
           cat $GITHUB_OUTPUT
           cat $GITHUB_OUTPUT >> parameters.txt
       - uses: actions/upload-artifact@v4
@@ -411,6 +411,16 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: profile
+      - name: Cache downloads
+        id: cache-tarballs
+        uses: actions/cache@v4
+        with:
+          path: /opt/cache
+          key: tarballs-${{ hashFiles('build-make.sh') }}
+      - name: Restore cache
+        if: steps.cache-tarballs.outputs.cache-hit != ''
+        run: |
+          ln -s /opt/cache/*.tar.* .
       - name: Build
         env:
           LLVM_VERSION: ${{needs.prepare.outputs.LLVM_VERSION}}
@@ -421,12 +431,19 @@ jobs:
           BUILD_DATE: ${{needs.prepare.outputs.BUILD_DATE}}
         run: |
           sudo apt-get update && sudo apt-get install libltdl-dev swig autoconf-archive
-          ./build-cross-tools.sh /opt/llvm-mingw $(pwd)/install/llvm-mingw ${{matrix.arch}} --with-python --thinlto --pgo
+          ./build-cross-tools.sh /opt/llvm-mingw $(pwd)/install/llvm-mingw ${{matrix.arch}} --with-python --with-busybox --thinlto --pgo
           .github/workflows/store-version.sh install/llvm-mingw/versions.txt
           cd install
           NAME=llvm-mingw-$TAG-${{matrix.crt}}-${{matrix.arch}}
           mv llvm-mingw $NAME
           zip -9rq ../$NAME.zip $NAME
+      - name: Save cache
+        if: steps.cache-tarballs.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p /opt/cache
+          for i in make-*.tar.*; do
+              if [ ! -L $i ]; then cp -a $i /opt/cache; fi
+          done
       - uses: actions/upload-artifact@v4
         with:
           name: windows-${{matrix.crt}}-${{matrix.arch}}-toolchain
@@ -437,9 +454,6 @@ jobs:
   # Run llvm-mingw's tests with the cross-built toolchains from above.
   test-toolchain:
     needs: [linux-cross-windows]
-    defaults:
-      run:
-        shell: msys2 {0}
     strategy:
       fail-fast: false
       matrix:
@@ -449,26 +463,23 @@ jobs:
           - aarch64
     runs-on: ${{startsWith(matrix.arch, 'a') && 'windows-11-arm' || 'windows-latest'}}
     steps:
-      - uses: msys2/setup-msys2@v2
-        with:
-          msystem: msys
-          install: >-
-            unzip
-            make
       - uses: actions/download-artifact@v4
         with:
           name: windows-ucrt-${{matrix.arch}}-toolchain
       - name: Unpack toolchain
         run: |
-          unzip -q llvm-mingw-*.zip
-          rm llvm-mingw-*.zip
-          mv llvm-mingw-* /llvm-mingw
+          Expand-Archive llvm-mingw-*.zip -DestinationPath .
+          del llvm-mingw-*.zip
+          mv llvm-mingw-* c:\llvm-mingw
+          echo "c:\llvm-mingw\busybox\bin" | Out-File -FilePath $Env:GITHUB_PATH -Encoding utf8 -Append
+          echo "c:\llvm-mingw\bin" | Out-File -FilePath $Env:GITHUB_PATH -Encoding utf8 -Append
       - uses: actions/checkout@v4
       - name: Run tests
+        shell: sh
         run: |
-          ./test-libcxx-module.sh /llvm-mingw
-          ./run-tests.sh /llvm-mingw
-          ./run-lldb-tests.sh /llvm-mingw
+          ./test-libcxx-module.sh c:/llvm-mingw
+          ./run-tests.sh c:/llvm-mingw
+          ./run-lldb-tests.sh c:/llvm-mingw
 
   # Run libcxx's tests with the cross-built toolchains from above.
   # (This builds its own copy of libcxx, but it should be pretty much
@@ -587,7 +598,7 @@ jobs:
           cd llvm-project
           mkdir build-openmp
           cd build-openmp
-          cmake ../openmp `
+          cmake ../runtimes `
             -G Ninja `
             -DCMAKE_BUILD_TYPE=Release `
             -DPython3_EXECUTABLE="$Env:PYTHON_EXE" `
@@ -595,8 +606,9 @@ jobs:
             -DCMAKE_C_COMPILER=clang `
             -DCMAKE_CXX_COMPILER=clang++ `
             -DCMAKE_ASM_MASM_COMPILER=llvm-ml `
+            -DLLVM_ENABLE_RUNTIMES="openmp" `
             -DLIBOMP_ASMFLAGS=${{matrix.asmflag}} `
-            -DLLVM_LIT_ARGS="-v --time-tests"
+            -DOPENMP_LIT_ARGS="-v --time-tests"
           ninja
           ninja check-openmp
 

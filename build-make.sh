@@ -52,7 +52,9 @@ download() {
 }
 
 if [ ! -d make-$MAKE_VERSION ]; then
-    download https://ftpmirror.gnu.org/gnu/make/make-$MAKE_VERSION.tar.gz
+    if [ ! -e make-$MAKE_VERSION.tar.gz ]; then
+        download https://ftpmirror.gnu.org/gnu/make/make-$MAKE_VERSION.tar.gz
+    fi
     tar -zxf make-$MAKE_VERSION.tar.gz
 fi
 
@@ -69,3 +71,5 @@ cd build$CROSS_NAME
 ../configure --prefix="$PREFIX" $CONFIGFLAGS --program-prefix=mingw32- --enable-job-server LDFLAGS="-Wl,-s"
 make -j$CORES
 make install-binPROGRAMS
+mkdir -p "$PREFIX/share/make"
+install -m644 ../COPYING "$PREFIX/share/make/COPYING.txt"
