@@ -17,7 +17,7 @@ on:
 
 jobs:
   prepare:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     outputs:
       TAG: ${{steps.get-parameters.outputs.TAG}}
     steps:
@@ -37,7 +37,7 @@ jobs:
 
   docker-build-dev:
     needs: [prepare]
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@v6
         with:
