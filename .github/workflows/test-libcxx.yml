@@ -13,9 +13,9 @@ on:
         type: choice
         options:
         - push
-        - schedule
-  schedule:
-    - cron: '30 13 * * 0' # 13:30 UTC on Sundays
+  #       - schedule
+  # schedule:
+  #   - cron: '30 13 * * 0' # 13:30 UTC on Sundays
 
 jobs:
   prepare:
